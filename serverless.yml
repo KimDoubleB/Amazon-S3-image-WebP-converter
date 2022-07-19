@@ -1,0 +1,40 @@
+service: aws-python-webp-converter
+
+plugins:
+  - serverless-dotenv-plugin
+
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: ap-northeast-2
+  lambdaHashingVersion: '20201221'
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource:
+            - arn:aws:s3:::${env:BUCKET_NAME}/*
+
+functions:
+  convert-to-webp:
+    handler: handler.webp_handler
+    layers:
+      - arn:aws:lambda:ap-northeast-2:770693421928:layer:Klayers-p38-Pillow:3
+    environment:
+      WEBP_DIRECTORY_NAME: ${env:WEBP_DIRECTORY_NAME} # directory name where you want to store webp file
+      IS_DELETE_ORIGINAL: ${env:IS_DELETE_ORIGINAL}   # True or False
+    events:
+      - s3:
+          bucket: ${env:BUCKET_NAME}
+          event: s3:ObjectCreated:*
+          existing: true
+          # You can set the trigger rule. This prevents the recursive trigger.
+          # Please refer to the example below.
+          # rules:
+          #  - prefix: images/
